@@ -1,22 +1,457 @@
-<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>দারুন নাজাত — Admin Panel</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>
-body{font-family:system-ui,'Noto Sans Bengali',sans-serif;max-width:1000px;margin:0 auto;padding:20px;background:#f6f8fb;color:#172033}h1{margin:0 0 6px}section{background:#fff;border:1px solid #e3e7ef;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 4px 16px #0000000a}input,select,button{font:inherit;padding:10px 12px;border:1px solid #ccd3df;border-radius:9px}button{cursor:pointer;background:#172033;color:#fff;border:0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.muted{color:#667085}.msg{padding:10px;border-radius:9px;background:#f1f5f9;white-space:pre-wrap}.danger{color:#b42318}.success{color:#027a48}.hidden{display:none}.exam{border:1px solid #e3e7ef;border-radius:12px;padding:12px;margin:8px 0}.pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#eef2ff;margin-left:8px}.dangerbtn{background:#b42318}.full{width:100%;box-sizing:border-box}
-</style></head><body>
-<h1>দারুন নাজাত Result Admin</h1><p class="muted">Excel import, exam management এবং scheduled publishing</p>
-<section id="loginBox"><h2>Admin Login</h2><div class="row"><input id="email" type="email" placeholder="Admin email"><input id="password" type="password" placeholder="Password"><button id="loginBtn">Login</button></div><p id="loginMsg"></p></section>
-<div id="app" class="hidden"><div class="row"><button id="logoutBtn">Logout</button><span id="who" class="muted"></span></div>
-<section><h2>Excel / CSV Import</h2><p class="muted">তোমার বর্তমান Excel-এর Class-1, Class-2 ... Hifz sheet structure ব্যবহার করা যাবে।</p><div class="row"><input id="year" type="number" value="2026"><select id="examKey"><option value="1st-term">প্রথম সাময়িক</option><option value="2nd-term" selected>দ্বিতীয় সাময়িক</option><option value="annual">বার্ষিক</option></select><input id="file" type="file" accept=".xlsx,.xls,.csv"><button id="uploadBtn">Import Excel</button></div><pre id="importMsg" class="msg"></pre></section>
-<section><h2>Exam / Publish Control</h2><div id="examList"></div><p id="examMsg" class="msg"></p></section></div>
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>দারুন নাজাত — Admin Panel</title>
+
+  <!-- Supabase UMD build -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    body{
+      font-family:system-ui,"Noto Sans Bengali",sans-serif;
+      max-width:1000px;margin:0 auto;padding:20px;
+      background:#f6f8fb;color:#172033
+    }
+    h1{margin:0 0 6px}
+    section{
+      background:#fff;border:1px solid #e3e7ef;border-radius:16px;
+      padding:20px;margin:16px 0;box-shadow:0 4px 16px #0000000a
+    }
+    input,select,button{
+      font:inherit;padding:11px 12px;border:1px solid #ccd3df;
+      border-radius:9px
+    }
+    input{background:#fff}
+    button{cursor:pointer;background:#172033;color:#fff;border:0}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .muted{color:#667085}
+    .msg{padding:12px;border-radius:9px;background:#f1f5f9;white-space:pre-wrap}
+    .error{color:#b42318;background:#fff1f0}
+    .success{color:#027a48;background:#ecfdf3}
+    .hidden{display:none!important}
+    .exam{border:1px solid #e3e7ef;border-radius:12px;padding:14px;margin:8px 0}
+    .pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#eef2ff;margin-left:8px}
+    .dangerbtn{background:#b42318}
+    .full{width:100%}
+    .statusbar{font-size:14px;margin-top:10px}
+    @media(max-width:600px){
+      body{padding:12px}
+      section{padding:16px}
+      input,select,button{width:100%}
+      .row{align-items:stretch}
+    }
+  </style>
+</head>
+
+<body>
+  <h1>দারুন নাজাত Result Admin</h1>
+  <p class="muted">Excel import, exam management এবং scheduled publishing</p>
+
+  <div id="systemMsg" class="msg">Supabase connection প্রস্তুত হচ্ছে...</div>
+
+  <section id="loginBox">
+    <h2>Admin Login</h2>
+    <input id="email" class="full" type="email" autocomplete="username"
+           placeholder="Admin email">
+    <br><br>
+    <input id="password" class="full" type="password" autocomplete="current-password"
+           placeholder="Password">
+    <br><br>
+    <button id="loginBtn" type="button">Login</button>
+    <p id="loginMsg" class="msg"></p>
+  </section>
+
+  <div id="app" class="hidden">
+    <div class="row">
+      <button id="logoutBtn" type="button">Logout</button>
+      <span id="who" class="muted"></span>
+    </div>
+
+    <section>
+      <h2>Excel / CSV Import</h2>
+      <p class="muted">
+        তোমার বর্তমান Excel-এর Class-1, Class-2 ... Hifz sheet structure ব্যবহার করা যাবে।
+      </p>
+
+      <div class="row">
+        <input id="year" type="number" value="2026">
+        <select id="examKey">
+          <option value="1st-term">প্রথম সাময়িক</option>
+          <option value="2nd-term" selected>দ্বিতীয় সাময়িক</option>
+          <option value="annual">বার্ষিক</option>
+        </select>
+        <input id="file" type="file" accept=".xlsx,.xls,.csv">
+        <button id="uploadBtn" type="button">Import Excel</button>
+      </div>
+
+      <pre id="importMsg" class="msg"></pre>
+    </section>
+
+    <section>
+      <h2>Exam / Publish Control</h2>
+      <div id="examList"></div>
+      <p id="examMsg" class="msg"></p>
+    </section>
+  </div>
+
 <script>
-const URL='https://tgfyfckwvjxyfnoswzhs.supabase.co';const KEY='sb_publishable_luHENdaCcXT77MnYlOjAIA_4GEOwmdi';const sb=supabase.createClient(URL,KEY);
-const $=id=>document.getElementById(id);let exams=[];
-async function api(path,options={}){const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Login required');options.headers={...(options.headers||{}),Authorization:'Bearer '+session.access_token};const r=await fetch(URL+'/functions/v1/'+path,options);const j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||'Request failed');return j}
-async function refresh(){const {data,error}=await sb.from('exams').select('*').order('year',{ascending:false}).order('created_at',{ascending:false});if(error){$('examMsg').textContent=error.message;return}exams=data||[];renderExams()}
-function renderExams(){if(!exams.length){$('examList').innerHTML='<p class="muted">কোনো exam নেই। আগে Excel import করুন।</p>';return}$('examList').innerHTML=exams.map(e=>`<div class="exam"><b>${e.exam_name_bn}</b> — ${e.year}<span class="pill">${e.status}</span><br><small>ID: ${e.id}</small><div class="row" style="margin-top:10px"><input type="datetime-local" id="dt-${e.id}"><button onclick="schedule('${e.id}')">Schedule</button><button onclick="publish('${e.id}')">Publish Now</button><button class="dangerbtn" onclick="unpublish('${e.id}')">Unpublish</button></div><small class="muted">Publish time: ${e.publish_at||'—'}</small></div>`).join('')}
-async function login(){const {error}=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(error){$('loginMsg').textContent=error.message;return}init()}
-async function init(){const {data:{session}}=await sb.auth.getSession();if(!session){$('loginBox').classList.remove('hidden');$('app').classList.add('hidden');return}$('loginBox').classList.add('hidden');$('app').classList.remove('hidden');$('who').textContent=session.user.email||'';await refresh()}
-async function logout(){await sb.auth.signOut();location.reload()}
-async function upload(){try{const f=$('file').files[0];if(!f){$('importMsg').textContent='আগে Excel file নির্বাচন করুন।';return}$('uploadBtn').disabled=true;$('importMsg').textContent='Import চলছে...';const fd=new FormData();fd.append('file',f);fd.append('year',$('year').value);fd.append('examKey',$('examKey').value);const j=await api('import-excel-v2',{method:'POST',body:fd});$('importMsg').textContent=JSON.stringify(j,null,2);await refresh()}catch(e){$('importMsg').textContent=e.message}finally{$('uploadBtn').disabled=false}}
-async function setStatus(id,status,publishAt){try{$('examMsg').textContent='Updating...';await api('publish-schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({examId:id,status,publishAt})});$('examMsg').textContent='সফলভাবে আপডেট হয়েছে।';await refresh()}catch(e){$('examMsg').textContent=e.message}}
-function schedule(id){const v=$('dt-'+id).value;if(!v){$('examMsg').textContent='আগে Publish time নির্বাচন করুন।';return}setStatus(id,'scheduled',new Date(v).toISOString())}function publish(id){setStatus(id,'published',new Date().toISOString())}function unpublish(id){setStatus(id,'unpublished',null)}
-$('loginBtn').onclick=login;$('logoutBtn').onclick=logout;$('uploadBtn').onclick=upload;sb.auth.onAuthStateChange(()=>init());init();
-</script></body></html>
+(function () {
+  "use strict";
+
+  const SUPABASE_URL =
+    "https://tgfyfckwvjxyfnoswzhs.supabase.co";
+
+  const SUPABASE_KEY =
+    "sb_publishable_luHENdaCcXT77MnYlOjAIA_4GEOwmdi";
+
+  let sb = null;
+  let exams = [];
+
+  const $ = (id) => document.getElementById(id);
+
+  function showSystem(text, type) {
+    const el = $("systemMsg");
+    el.textContent = text;
+    el.className = "msg " + (type || "");
+  }
+
+  function showLogin(text, type) {
+    const el = $("loginMsg");
+    el.textContent = text || "";
+    el.className = "msg " + (type || "");
+  }
+
+  function waitForSupabase() {
+    if (window.supabase && typeof window.supabase.createClient === "function") {
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        showSystem("Supabase connected. এখন Admin Login করুন।", "success");
+        bindEvents();
+        init();
+      } catch (e) {
+        showSystem("Supabase initialize error: " + e.message, "error");
+      }
+      return;
+    }
+
+    setTimeout(function () {
+      if (window.supabase && typeof window.supabase.createClient === "function") {
+        waitForSupabase();
+      } else {
+        showSystem(
+          "Supabase JavaScript library load হয়নি। Internet connection/check browser করে page refresh করুন।",
+          "error"
+        );
+      }
+    }, 250);
+  }
+
+  function bindEvents() {
+    $("loginBtn").addEventListener("click", login);
+    $("logoutBtn").addEventListener("click", logout);
+    $("uploadBtn").addEventListener("click", upload);
+  }
+
+  async function login() {
+    const email = $("email").value.trim();
+    const password = $("password").value;
+
+    if (!email || !password) {
+      showLogin("Email এবং Password দুটোই দিন।", "error");
+      return;
+    }
+
+    const btn = $("loginBtn");
+    btn.disabled = true;
+    btn.textContent = "Login হচ্ছে...";
+    showLogin("Supabase-এ login করা হচ্ছে...");
+
+    try {
+      const result = await sb.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (result.error) {
+        showLogin("Login failed:\n" + result.error.message, "error");
+        return;
+      }
+
+      showLogin("Login সফল হয়েছে।", "success");
+      await init();
+    } catch (e) {
+      showLogin(
+        "Connection error:\n" + (e && e.message ? e.message : String(e)),
+        "error"
+      );
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Login";
+    }
+  }
+
+  async function init() {
+    try {
+      const result = await sb.auth.getSession();
+
+      if (result.error) {
+        showSystem("Session error: " + result.error.message, "error");
+        return;
+      }
+
+      const session = result.data.session;
+
+      if (!session) {
+        $("loginBox").classList.remove("hidden");
+        $("app").classList.add("hidden");
+        return;
+      }
+
+      $("loginBox").classList.add("hidden");
+      $("app").classList.remove("hidden");
+      $("who").textContent = session.user.email || "";
+
+      await refresh();
+    } catch (e) {
+      showSystem(
+        "Admin initialization error:\n" + e.message,
+        "error"
+      );
+    }
+  }
+
+  async function logout() {
+    try {
+      await sb.auth.signOut();
+      location.reload();
+    } catch (e) {
+      showSystem("Logout error: " + e.message, "error");
+    }
+  }
+
+  async function refresh() {
+    $("examMsg").textContent = "Exam list loading...";
+
+    const result = await sb
+      .from("exams")
+      .select("*")
+      .order("year", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (result.error) {
+      $("examMsg").textContent =
+        "Exam load failed:\n" + result.error.message;
+      return;
+    }
+
+    exams = result.data || [];
+    renderExams();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function renderExams() {
+    if (!exams.length) {
+      $("examList").innerHTML =
+        '<p class="muted">কোনো exam নেই। আগে Excel import করুন।</p>';
+      $("examMsg").textContent = "";
+      return;
+    }
+
+    $("examList").innerHTML = exams.map(function (e) {
+      return `
+        <div class="exam">
+          <b>${escapeHtml(e.exam_name_bn)}</b>
+          — ${escapeHtml(e.year)}
+          <span class="pill">${escapeHtml(e.status)}</span>
+          <br>
+          <small>ID: ${escapeHtml(e.id)}</small>
+
+          <div class="row" style="margin-top:10px">
+            <input type="datetime-local" id="dt-${escapeHtml(e.id)}">
+            <button type="button"
+              data-action="schedule"
+              data-id="${escapeHtml(e.id)}">Schedule</button>
+
+            <button type="button"
+              data-action="publish"
+              data-id="${escapeHtml(e.id)}">Publish Now</button>
+
+            <button type="button"
+              class="dangerbtn"
+              data-action="unpublish"
+              data-id="${escapeHtml(e.id)}">Unpublish</button>
+          </div>
+
+          <small class="muted">
+            Publish time: ${escapeHtml(e.publish_at || "—")}
+          </small>
+        </div>
+      `;
+    }).join("");
+
+    document.querySelectorAll("[data-action]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+
+        if (action === "schedule") schedule(id);
+        if (action === "publish") publish(id);
+        if (action === "unpublish") unpublish(id);
+      });
+    });
+
+    $("examMsg").textContent = "";
+  }
+
+  async function api(path, options) {
+    options = options || {};
+
+    const sessionResult = await sb.auth.getSession();
+    const session = sessionResult.data.session;
+
+    if (!session) {
+      throw new Error("Login required");
+    }
+
+    const headers = Object.assign(
+      {},
+      options.headers || {},
+      { Authorization: "Bearer " + session.access_token }
+    );
+
+    const response = await fetch(
+      SUPABASE_URL + "/functions/v1/" + path,
+      Object.assign({}, options, { headers: headers })
+    );
+
+    const text = await response.text();
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (_) {
+      throw new Error(
+        "Edge Function response:\n" +
+        text +
+        "\n\nHTTP status: " +
+        response.status
+      );
+    }
+
+    if (!response.ok || json.ok === false) {
+      throw new Error(
+        json.error ||
+        ("Request failed. HTTP " + response.status)
+      );
+    }
+
+    return json;
+  }
+
+  async function upload() {
+    const file = $("file").files[0];
+
+    if (!file) {
+      $("importMsg").textContent =
+        "আগে Excel/CSV file নির্বাচন করুন।";
+      return;
+    }
+
+    const button = $("uploadBtn");
+    button.disabled = true;
+    $("importMsg").textContent = "Import চলছে...";
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("year", $("year").value);
+      fd.append("examKey", $("examKey").value);
+
+      const result = await api("import-excel-v2", {
+        method: "POST",
+        body: fd
+      });
+
+      $("importMsg").textContent =
+        JSON.stringify(result, null, 2);
+
+      await refresh();
+    } catch (e) {
+      $("importMsg").textContent =
+        "Import failed:\n" + e.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function setStatus(id, status, publishAt) {
+    $("examMsg").textContent = "Updating...";
+
+    try {
+      const result = await api("publish-schedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          examId: id,
+          status: status,
+          publishAt: publishAt
+        })
+      });
+
+      $("examMsg").textContent =
+        result.message || "সফলভাবে আপডেট হয়েছে।";
+
+      await refresh();
+    } catch (e) {
+      $("examMsg").textContent =
+        "Update failed:\n" + e.message;
+    }
+  }
+
+  function schedule(id) {
+    const value = $("dt-" + id).value;
+
+    if (!value) {
+      $("examMsg").textContent =
+        "আগে Publish time নির্বাচন করুন।";
+      return;
+    }
+
+    setStatus(
+      id,
+      "scheduled",
+      new Date(value).toISOString()
+    );
+  }
+
+  function publish(id) {
+    setStatus(
+      id,
+      "published",
+      new Date().toISOString()
+    );
+  }
+
+  function unpublish(id) {
+    setStatus(id, "unpublished", null);
+  }
+
+  window.addEventListener("load", waitForSupabase);
+})();
+</script>
+</body>
+</html>
