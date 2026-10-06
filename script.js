@@ -1,5 +1,7 @@
+import {{ bnBijoy2Unicode }} from "https://esm.sh/@codesigntheory/bnbijoy2unicode@1.3.0";
 // ফলাফল ডাটা: ২০২৬ সালের দ্বিতীয় সাময়িক পরীক্ষা
 const students = [];
+const b2u = (v) => { const s=String(v ?? ""); if(/[\u0980-\u09ff]/.test(s)) return s; try { return bnBijoy2Unicode(s); } catch { return s; } };
 let currentPersonalStudent = null;
 
 const yearSelect = document.getElementById("resultYear");
@@ -49,20 +51,20 @@ async function loadResultData(){
       rows.forEach(r=>{
         students.push({
           year:String(r.exams?.year ?? ''),
-          exam:r.exams?.exam_name || '',
-          examBn:r.exams?.exam_name_bn || r.exams?.exam_name || '',
+          exam:b2u(r.exams?.exam_name || ''),
+          examBn:b2u(r.exams?.exam_name_bn || r.exams?.exam_name || ''),
           examKey:r.exams?.exam_key || '',
           className:r.classes?.code || '',
-          classBn:r.classes?.name_bn || r.classes?.code || '',
+          classBn:b2u(r.classes?.name_bn || r.classes?.code || ''),
           roll:String(r.roll ?? ''),
           reg:String(r.registration ?? ''),
           registration:String(r.registration ?? ''),
-          name:r.student_name || '',
-          subjects:Array.isArray(r.subjects) ? r.subjects : [],
+          name:b2u(r.student_name || ''),
+          subjects:Array.isArray(r.subjects) ? r.subjects.map(x=>({...x,name:b2u(x.name||x.subject||'')})) : Object.entries(r.subjects||{}).map(([name,mark])=>({{name:b2u(name),mark}})),
           total:r.total,
           average:r.average,
           point:r.point,
-          grade:r.grade,
+          grade:b2u(r.grade),
           rank:r.rank
         });
       });
@@ -165,7 +167,7 @@ function showPersonalResult(s){
   const status=absent ? '<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>' : (s.grade==='F' ? '<span class="fail">ফেল</span>' : '<span class="pass">উত্তীর্ণ</span>');
   const total=s.total==null?'—':bnNum(s.total);
   const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
+  const point=s.point==null?'—':Number(s.point).toFixed(2);
   resultArea.innerHTML=`
     <div class="result-head"><img src="logo.jpg" alt="মাদ্রাসার লোগো"><div><h2>দারুন নাজাত আইডিয়াল মাদরাসা</h2><p>শিক্ষাবর্ষ: ${bnNum(s.year || "2026")} — ${esc(s.examBn || s.exam)} — ${esc(s.classBn || s.className)}</p></div></div>
     <div class="student-info">
@@ -294,7 +296,7 @@ function showListResult(){
       <td>${esc(s.classBn||s.className||"—")}</td>
       <td>${s.total==null?"—":bnNum(s.total)}</td>
       <td>${s.average==null?"—":bnNum(Number(s.average).toFixed(2))}</td>
-      <td>${s.point==null?"—":bnNum(Number(s.point).toFixed(2))}</td>
+      <td>${s.point==null?"—":Number(s.point).toFixed(2)}</td>
       <td><strong class="aplus-grade">${esc(s.grade||"A+")}</strong></td>
       <td>${typeof s.rank==="number" ? bnNum(s.rank) : esc(s.rank||"—")}</td>
     </tr>`).join("");
@@ -305,7 +307,7 @@ function showListResult(){
       <td>${esc(s.classBn||s.className||"—")}</td>
       <td>${s.total==null?"—":bnNum(s.total)}</td>
       <td>${s.average==null?"—":bnNum(Number(s.average).toFixed(2))}</td>
-      <td>${s.point==null?"—":bnNum(Number(s.point).toFixed(2))}</td>
+      <td>${s.point==null?"—":Number(s.point).toFixed(2)}</td>
       <td><strong class="aplus-grade">${esc(s.grade||"—")}</strong></td>
       <td>${typeof s.rank==="number" ? bnNum(s.rank) : esc(s.rank||"—")}</td>
     </tr>`).join("");
@@ -406,7 +408,7 @@ function buildPersonalPrintSheet(s){
   const grade=esc(s.grade||'—');
   const total=s.total==null?'—':bnNum(s.total);
   const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
+  const point=s.point==null?'—':Number(s.point).toFixed(2);
   return `
   <div class="print-sheet personal-print-sheet">
     <div class="print-decor top"></div>

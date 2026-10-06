@@ -1,26 +1,14 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-const URL=Deno.env.get('SUPABASE_URL')!;
-const SERVICE=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const ANON=Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
-const db=createClient(URL,SERVICE);
-Deno.serve(async(req)=>{
-  try{
-    const auth=req.headers.get('Authorization')||'';
-    const token=auth.replace(/^Bearer\s+/i,'');
-    if(!token) throw new Error('Unauthorized');
-    const userClient=createClient(URL,ANON,{global:{headers:{Authorization:`Bearer ${token}`}}});
-    const {data:{user}}=await userClient.auth.getUser(token);
-    if(!user) throw new Error('Unauthorized');
-    const {data:admin}=await db.from('admin_users').select('user_id').eq('user_id',user.id).maybeSingle();
-    if(!admin) throw new Error('Not an admin');
-    const {examId,publishAt,status}=await req.json();
-    if(!examId) throw new Error('examId required');
-    if(!['scheduled','published','unpublished','draft'].includes(status)) throw new Error('Invalid status');
-    const patch:any={status,publish_at:publishAt||null,updated_at:new Date().toISOString()};
-    if(status==='published') patch.published_at=new Date().toISOString();
-    else if(status==='unpublished' || status==='draft') patch.published_at=null;
-    const {data,error}=await db.from('exams').update(patch).eq('id',examId).select().single();
-    if(error) throw error;
-    return new Response(JSON.stringify({ok:true,exam:data}),{headers:{'content-type':'application/json'}});
-  }catch(e){return new Response(JSON.stringify({ok:false,error:String(e)}),{status:400,headers:{'content-type':'application/json'}})}
-});
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import * as XLSX from "npm:xlsx@0.18.5";
+import { bnBijoy2Unicode } from "npm:@codesigntheory/bnbijoy2unicode@1.3.0";
+const H={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
+const S=["Class-1","Class-2","Class-3","Class-4","Class-5","Class-6","Narsari","Hifz"] as const;
+const O:Record<string,number>={Narsari:0,"Class-1":1,"Class-2":2,"Class-3":3,"Class-4":4,"Class-5":5,"Class-6":6,Hifz:7};
+const CN:Record<string,string>={Narsari:"নার্সারি","Class-1":"প্রথম শ্রেণি","Class-2":"দ্বিতীয় শ্রেণি","Class-3":"তৃতীয় শ্রেণি","Class-4":"চতুর্থ শ্রেণি","Class-5":"পঞ্চম শ্রেণি","Class-6":"ষষ্ঠ শ্রেণি",Hifz:"হিফজ"};
+const J=(x:unknown,n=200)=>new Response(JSON.stringify(x),{status:n,headers:H});
+const T=(x:unknown)=>x==null?null:(String(x).trim()||null);
+const B=(x:unknown)=>{const s=T(x);if(!s)return null;if(/[\u0980-\u09ff]/.test(s)&&!/[†‡ˆ‰Š„…ƒ~–“”©®™¤š›]/.test(s))return s;try{return bnBijoy2Unicode(s)}catch{return s}};
+const N=(x:unknown)=>x==null||x===""?null:(Number.isFinite(Number(x))?Number(x):null);
+function parse(ws:XLSX.WorkSheet){const a:any[][]=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});let h=-1;for(let i=0;i<a.length;i++){const x=String(a[i]?.[0]??"");const y=String(a[i]?.[1]??"");if((x.includes("µwgK")||x.includes("µ bs"))&&(y.includes("cixÿv")||y.includes("wkÿv"))){h=i;break}}if(h<0)h=12;const heads=(a[h]||[]).map((x:any,i:number)=>B(x)??"Column-"+(i+1));const rows:any[]=[];for(let i=h+1;i<a.length;i++)if(N(a[i]?.[0])!==null&&T(a[i]?.[1]))rows.push({c:a[i],r:i+1});return{heads,rows,h}}
+function ix(h:string[]){const z={t:-1,a:-1,p:-1,g:-1,r:-1};for(let i=2;i<h.length;i++){const x=h[i];if(z.t<0&&(x.includes("†gvU")||x.includes("gvU")))z.t=i;else if(z.a<0&&(x==="Mo"||x.toLowerCase().includes("average")))z.a=i;else if(z.p<0&&x.includes("c‡q"))z.p=i;else if(z.g<0&&x.includes("‡MÖW"))z.g=i;else if(z.r<0&&x.includes("Ave¯’vb"))z.r=i}return z}
+Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response("ok",{headers:H});if(req.method!=="POST")return J({ok:false,error:"POST method required"},405);try{const u=Deno.env.get("SUPABASE_URL"),k=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!u||!k)return J({ok:false,error:"Server configuration error"},500);const au=req.headers.get("Authorization")||"";if(!au.startsWith("Bearer "))return J({ok:false,error:"Missing Authorization bearer token"},401);const sb=createClient(u,k,{auth:{autoRefreshToken:false,persistSession:false}});const q=await sb.auth.getUser(au.slice(7).trim());if(q.error||!q.data.user)return J({ok:false,error:"Invalid authentication token"},401);const ad=await sb.from("admin_users").select("user_id").eq("user_id",q.data.user.id).limit(1);if(ad.error)return J({ok:false,error:ad.error.message},500);if(!ad.data?.length)return J({ok:false,error:"Not authorized"},403);const f=await req.formData(),year=N(f.get("year")),key=T(f.get("examKey")),en=T(f.get("examName")),bn=T(f.get("examNameBn")),file=f.get("file")??f.get("excel")??f.get("csv");if(!year||!key||!(file instanceof File))return J({ok:false,error:"year, examKey and file are required"},400);if(file.size>15*1024*1024)return J({ok:false,error:"File is larger than 15 MB"},400);const wb=XLSX.read(new Uint8Array(await file.arrayBuffer()),{type:"array",cellDates:true}),now=new Date().toISOString();let ex=await sb.from("exams").select("id").eq("year",year).eq("exam_key",key).limit(1).maybeSingle();if(ex.error)return J({ok:false,error:ex.error.message},500);let eid=ex.data?.id;if(!eid){const c=await sb.from("exams").insert({id:crypto.randomUUID(),year,exam_key:key,exam_name:en??key,exam_name_bn:bn??en??key,status:"draft",created_by:q.data.user.id,created_at:now,updated_at:now}).select("id").single();if(c.error||!c.data)return J({ok:false,error:c.error?.message??"exam create failed"},500);eid=c.data.id}let ti=0,tu=0,ts=0,outs:any[]=[];for(const sn of S){if(!wb.SheetNames.includes(sn))continue;const p=parse(wb.Sheets[sn]),m=ix(p.heads);let cl=await sb.from("classes").select("id").eq("code",sn).limit(1).maybeSingle();if(cl.error)return J({ok:false,error:cl.error.message},500);let cid=cl.data?.id;if(!cid){const c=await sb.from("classes").insert({id:crypto.randomUUID(),code:sn,name_bn:CN[sn]??sn,sort_order:O[sn],created_at:now}).select("id").single();if(c.error||!c.data)return J({ok:false,error:c.error?.message??"class create failed"},500);cid=c.data.id}let im=0,up=0,sk=0;for(const it of p.rows){const c=it.c,roll=T(c[0]),name=B(c[1]);if(!roll||!name){sk++;continue}const subjects:any={};const end=m.t>=0?m.t:p.heads.length-4;for(let j=2;j<end;j++){if(c[j]!==null&&c[j]!==undefined&&String(c[j]).trim()!=="")subjects[B(p.heads[j])||p.heads[j]]=N(c[j])??String(c[j]).trim()}const rec={exam_id:eid,class_id:cid,roll,registration:null,student_name:name,subjects,total:m.t>=0?N(c[m.t]):null,average:m.a>=0?N(c[m.a]):null,point:m.p>=0?N(c[m.p]):null,grade:B(c[m.g]),rank:m.r>=0?B(c[m.r]):null,imported_at:now};const old=await sb.from("result_records").select("id").eq("exam_id",eid).eq("class_id",cid).eq("roll",roll).limit(1).maybeSingle();if(old.error)return J({ok:false,error:old.error.message},500);if(old.data?.id){const z=await sb.from("result_records").update(rec).eq("id",old.data.id);if(z.error)return J({ok:false,error:z.error.message},500);up++}else{const z=await sb.from("result_records").insert({id:crypto.randomUUID(),...rec});if(z.error)return J({ok:false,error:z.error.message},500);im++}}ti+=im;tu+=up;ts+=sk;outs.push({sheet:sn,rows:p.rows.length,imported:im,updated:up,skipped:sk,headerRow:p.h+1})}return J({ok:true,message:"Excel/CSV import completed successfully — Bijoy/SutonnyMJ converted to Unicode",examId:eid,year,examKey:key,totalImported:ti,totalUpdated:tu,totalSkipped:ts,sheets:outs})}catch(e){return J({ok:false,error:"Unexpected server error",detail:e instanceof Error?e.message:String(e)},500)}});
