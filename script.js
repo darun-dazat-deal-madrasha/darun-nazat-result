@@ -1,7 +1,5 @@
-import {{ bnBijoy2Unicode }} from "https://esm.sh/@codesigntheory/bnbijoy2unicode@1.3.0";
 // ফলাফল ডাটা: ২০২৬ সালের দ্বিতীয় সাময়িক পরীক্ষা
 const students = [];
-const b2u = (v) => { const s=String(v ?? ""); if(/[\u0980-\u09ff]/.test(s)) return s; try { return bnBijoy2Unicode(s); } catch { return s; } };
 let currentPersonalStudent = null;
 
 const yearSelect = document.getElementById("resultYear");
@@ -39,32 +37,55 @@ let examOptions = [];
 async function loadResultData(){
   try{
     students.length=0;
+
+    // Admin Preview: use the authenticated preview snapshot prepared by admin.html.
+    // This renders through the exact same public result UI without exposing unpublished data publicly.
+    const previewMode = new URLSearchParams(location.search).get('adminPreview') === '1';
+    const previewRaw = previewMode ? localStorage.getItem('DN_ADMIN_PREVIEW') : null;
+    if(previewRaw){
+      try{
+        const preview = JSON.parse(previewRaw);
+        if(preview && Array.isArray(preview.students) && preview.students.length){
+          preview.students.forEach(s=>students.push(s));
+          examOptions = unique(students.map(s=>JSON.stringify({value:s.exam,label:s.examBn})))
+            .map(x=>JSON.parse(x));
+          examOptions.sort((a,b)=>a.value.localeCompare(b.value));
+          loadYears();
+          showAdminPreviewBanner(preview);
+          return;
+        }
+      }catch(previewError){
+        console.warn('Admin preview snapshot invalid:', previewError);
+      }
+    }
+
     const pageSize=1000;
     let from=0;
     while(true){
       const {data,error}=await supabaseClient
         .from('result_records')
         .select('id,exam_id,class_id,roll,registration,student_name,subjects,total,average,point,grade,rank,exams!inner(year,exam_key,exam_name,exam_name_bn,status,publish_at),classes!inner(code,name_bn)')
+        .eq('exams.status','published')
         .range(from,from+pageSize-1);
       if(error) throw error;
       const rows=data||[];
       rows.forEach(r=>{
         students.push({
           year:String(r.exams?.year ?? ''),
-          exam:b2u(r.exams?.exam_name || ''),
-          examBn:b2u(r.exams?.exam_name_bn || r.exams?.exam_name || ''),
+          exam:r.exams?.exam_name || '',
+          examBn: ({'1st-term':'প্রথম সাময়িক পরীক্ষা','2nd-term':'দ্বিতীয় সাময়িক পরীক্ষা','annual':'বার্ষিক পরীক্ষা'}[r.exams?.exam_key] || r.exams?.exam_name_bn || r.exams?.exam_name || ''),
           examKey:r.exams?.exam_key || '',
           className:r.classes?.code || '',
-          classBn:b2u(r.classes?.name_bn || r.classes?.code || ''),
+          classBn:r.classes?.name_bn || r.classes?.code || '',
           roll:String(r.roll ?? ''),
           reg:String(r.registration ?? ''),
           registration:String(r.registration ?? ''),
-          name:b2u(r.student_name || ''),
-          subjects:Array.isArray(r.subjects) ? r.subjects.map(x=>({...x,name:b2u(x.name||x.subject||'')})) : Object.entries(r.subjects||{}).map(([name,mark])=>({{name:b2u(name),mark}})),
+          name:r.student_name || '',
+          subjects:Array.isArray(r.subjects) ? r.subjects : [],
           total:r.total,
           average:r.average,
           point:r.point,
-          grade:b2u(r.grade),
+          grade:r.grade,
           rank:r.rank
         });
       });
@@ -94,6 +115,18 @@ function fillSelect(select, values, placeholder){
 }
 function esc(v){
   return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function showAdminPreviewBanner(preview){
+  let banner=document.getElementById('adminPreviewBanner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='adminPreviewBanner';
+    banner.style.cssText='position:sticky;top:0;z-index:50;background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:10px 14px;margin:0 0 14px;border-radius:10px;text-align:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)';
+    const main=document.querySelector('main.main');
+    if(main) main.prepend(banner);
+  }
+  banner.textContent='PREVIEW MODE — '+(preview.examNameBn || 'ফলাফল')+' | এটি পাবলিকভাবে প্রকাশিত ফলাফল নয়';
 }
 
 function getYears(){
@@ -167,7 +200,7 @@ function showPersonalResult(s){
   const status=absent ? '<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>' : (s.grade==='F' ? '<span class="fail">ফেল</span>' : '<span class="pass">উত্তীর্ণ</span>');
   const total=s.total==null?'—':bnNum(s.total);
   const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':Number(s.point).toFixed(2);
+  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
   resultArea.innerHTML=`
     <div class="result-head"><img src="logo.jpg" alt="মাদ্রাসার লোগো"><div><h2>দারুন নাজাত আইডিয়াল মাদরাসা</h2><p>শিক্ষাবর্ষ: ${bnNum(s.year || "2026")} — ${esc(s.examBn || s.exam)} — ${esc(s.classBn || s.className)}</p></div></div>
     <div class="student-info">
@@ -296,7 +329,7 @@ function showListResult(){
       <td>${esc(s.classBn||s.className||"—")}</td>
       <td>${s.total==null?"—":bnNum(s.total)}</td>
       <td>${s.average==null?"—":bnNum(Number(s.average).toFixed(2))}</td>
-      <td>${s.point==null?"—":Number(s.point).toFixed(2)}</td>
+      <td>${s.point==null?"—":bnNum(Number(s.point).toFixed(2))}</td>
       <td><strong class="aplus-grade">${esc(s.grade||"A+")}</strong></td>
       <td>${typeof s.rank==="number" ? bnNum(s.rank) : esc(s.rank||"—")}</td>
     </tr>`).join("");
@@ -307,7 +340,7 @@ function showListResult(){
       <td>${esc(s.classBn||s.className||"—")}</td>
       <td>${s.total==null?"—":bnNum(s.total)}</td>
       <td>${s.average==null?"—":bnNum(Number(s.average).toFixed(2))}</td>
-      <td>${s.point==null?"—":Number(s.point).toFixed(2)}</td>
+      <td>${s.point==null?"—":bnNum(Number(s.point).toFixed(2))}</td>
       <td><strong class="aplus-grade">${esc(s.grade||"—")}</strong></td>
       <td>${typeof s.rank==="number" ? bnNum(s.rank) : esc(s.rank||"—")}</td>
     </tr>`).join("");
@@ -408,7 +441,7 @@ function buildPersonalPrintSheet(s){
   const grade=esc(s.grade||'—');
   const total=s.total==null?'—':bnNum(s.total);
   const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':Number(s.point).toFixed(2);
+  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
   return `
   <div class="print-sheet personal-print-sheet">
     <div class="print-decor top"></div>
