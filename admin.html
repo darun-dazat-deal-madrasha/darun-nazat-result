@@ -130,6 +130,7 @@
     if (window.supabase && typeof window.supabase.createClient === "function") {
       try {
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        window.adminSupabase = sb;
         showSystem("Supabase connected. এখন Admin Login করুন।", "success");
         bindEvents();
         init();
@@ -491,33 +492,68 @@ async function renderAdminPreview(){
   const title=document.getElementById('previewExamTitle');
   if(!box) return;
   try{
-    // Reuse the page's existing Supabase client and current exam selection where available.
-    const examKeyEl=document.querySelector('select[name*="exam" i], #examKey, #exam, select');
+    const client = window.adminSupabase;
+    if(!client){
+      box.textContent='Supabase সংযোগ পাওয়া যায়নি। পেজটি একবার Refresh করুন।';
+      return;
+    }
+
+    // Use the currently selected exam controls when available.
+    const examKeyEl=document.querySelector('select[name*="exam" i], #examKey, #exam');
     const yearEl=document.querySelector('input[name*="year" i], #year');
     const examKey=(examKeyEl && examKeyEl.value) || '2nd-term';
     const year=Number((yearEl && yearEl.value) || new Date().getFullYear());
+
     const names={
       '1st-term':'প্রথম সাময়িক পরীক্ষা',
       '2nd-term':'দ্বিতীয় সাময়িক পরীক্ষা',
       'annual':'বার্ষিক পরীক্ষা'
     };
-    if(title) title.textContent=(names[examKey]||examKey)+' — '+year;
-    if(typeof sb==='undefined'){
-      box.textContent='Supabase সংযোগ পাওয়া যায়নি।';
+
+    const {data: exam, error: ee}=await client
+      .from('exams')
+      .select('id,exam_name_bn,exam_name,year,status,exam_key')
+      .eq('year',year)
+      .eq('exam_key',examKey)
+      .maybeSingle();
+
+    if(ee) throw ee;
+    if(!exam){
+      box.textContent='এই পরীক্ষার তথ্য পাওয়া যায়নি।';
       return;
     }
-    const {data: exam, error: ee}=await sb.from('exams').select('id,exam_name_bn,exam_name,year,status').eq('year',year).eq('exam_key',examKey).maybeSingle();
-    if(ee) throw ee;
-    if(!exam){ box.textContent='এই পরীক্ষার তথ্য পাওয়া যায়নি।'; return; }
-    const {data: rows, error: re}=await sb.from('result_records').select('roll,student_name,total,average,point,grade,rank,class_id,classes:class_id(name_bn,code)').eq('exam_id',exam.id).order('roll');
+
+    if(title) title.textContent=(exam.exam_name_bn || names[examKey] || exam.exam_name || examKey)+' — '+exam.year;
+
+    const {data: rows, error: re}=await client
+      .from('result_records')
+      .select('roll,student_name,total,average,point,grade,rank,class_id')
+      .eq('exam_id',exam.id)
+      .order('class_id')
+      .order('roll');
+
     if(re) throw re;
-    if(!rows || !rows.length){ box.textContent='এই পরীক্ষায় কোনো ফলাফল নেই।'; return; }
-    let out='<table class="preview-table"><thead><tr><th>ক্রম</th><th>শ্রেণি</th><th>রোল</th><th>শিক্ষার্থীর নাম</th><th>মোট</th><th>গড়</th><th>পয়েন্ট</th><th>গ্রেড</th><th>স্থান</th></tr></thead><tbody>';
+    if(!rows || !rows.length){
+      box.textContent='এই পরীক্ষায় কোনো ফলাফল নেই।';
+      return;
+    }
+
+    const classIds=[...new Set(rows.map(r=>r.class_id).filter(Boolean))];
+    let classMap={};
+    if(classIds.length){
+      const {data: classes, error: ce}=await client
+        .from('classes')
+        .select('id,code,name_bn')
+        .in('id',classIds);
+      if(ce) throw ce;
+      (classes||[]).forEach(c=>classMap[c.id]=c.name_bn||c.code||'');
+    }
+
+    let out='<div style="overflow:auto"><table class="preview-table"><thead><tr><th>ক্রম</th><th>শ্রেণি</th><th>রোল</th><th>শিক্ষার্থীর নাম</th><th>মোট</th><th>গড়</th><th>পয়েন্ট</th><th>গ্রেড</th><th>স্থান</th></tr></thead><tbody>';
     rows.forEach((r,i)=>{
-      const cls=r.classes ? (r.classes.name_bn || r.classes.code || '') : '';
-      out+='<tr><td>'+(i+1)+'</td><td>'+escBn(cls)+'</td><td>'+escBn(r.roll||'')+'</td><td style="text-align:left">'+escBn(r.student_name||'')+'</td><td>'+escBn(r.total??'')+'</td><td>'+escBn(r.average??'')+'</td><td>'+escBn(r.point??'')+'</td><td>'+escBn(r.grade??'')+'</td><td>'+escBn(r.rank??'')+'</td></tr>';
+      out+='<tr><td>'+(i+1)+'</td><td>'+escBn(classMap[r.class_id]||'')+'</td><td>'+escBn(r.roll||'')+'</td><td style="text-align:left">'+escBn(r.student_name||'')+'</td><td>'+escBn(r.total??'')+'</td><td>'+escBn(r.average??'')+'</td><td>'+escBn(r.point??'')+'</td><td>'+escBn(r.grade??'')+'</td><td>'+escBn(r.rank??'')+'</td></tr>';
     });
-    out+='</tbody></table>';
+    out+='</tbody></table></div>';
     box.innerHTML=out;
   }catch(e){
     box.textContent='Preview লোড করতে সমস্যা হয়েছে: '+(e.message||e);
