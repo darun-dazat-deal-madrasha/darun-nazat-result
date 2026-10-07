@@ -45,29 +45,6 @@
       .row{align-items:stretch}
     }
   </style>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-html,body,button,input,select,textarea,table,th,td{font-family:"Noto Sans Bengali",system-ui,-apple-system,"Segoe UI",sans-serif!important}
-.preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:99999;display:none;overflow:auto;padding:14px;box-sizing:border-box}
-.preview-panel{width:min(980px,100%);margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.35)}
-.preview-toolbar{position:sticky;top:0;z-index:5;background:#087f4e;color:#fff;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.preview-toolbar strong{font-size:18px}.preview-close{border:0;border-radius:9px;background:#fff;color:#087f4e;padding:8px 13px;font-weight:800}
-.preview-controls{background:#f7faf8;padding:14px;border-bottom:1px solid #dfe4e7;display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:9px}
-.preview-controls label{font-size:12px;font-weight:700;margin-bottom:4px;display:block}.preview-controls select,.preview-controls input{width:100%;height:43px;box-sizing:border-box;border:1px solid #cfd8d3;border-radius:9px;padding:0 10px;background:#fff;font:inherit}.preview-load{height:43px;border:0;border-radius:9px;background:#087f4e;color:#fff;padding:0 15px;font-weight:800;cursor:pointer}
-.preview-body{background:#eef3f1;padding:16px}.preview-badge{display:inline-block;background:#b91c1c;color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;margin-bottom:10px}
-.preview-result{background:#fff;border:1px solid #e4e7e9;border-radius:16px;box-shadow:0 5px 20px rgba(0,0,0,.08);overflow:hidden}
-.preview-result .result-head{background:#087f4e;color:#fff;text-align:center;padding:22px 20px;display:flex;align-items:center;justify-content:center;gap:14px}
-.preview-result .result-head img{width:58px;height:58px;border-radius:50%;object-fit:contain;background:#fff}.preview-result .result-head h2{margin:0;font-size:25px}.preview-result .result-head p{margin:3px 0 0;font-size:14px}
-.preview-result .student-info{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:22px;border-bottom:1px solid #e5e8ea}.preview-result .info-box{background:#f7faf8;border-radius:11px;padding:11px 13px}.preview-result .info-box small{display:block;color:#69736e;font-size:12px}.preview-result .info-box strong{font-size:15px}
-.preview-result .table-wrap{overflow-x:auto;padding:0 20px}.preview-result .result-table{width:100%;border-collapse:collapse;min-width:570px;margin:18px 0}.preview-result .result-table th,.preview-result .result-table td{padding:12px 10px;border:1px solid #dfe4e7;text-align:center}.preview-result .result-table th{background:#e9f6ef;font-weight:700}.preview-result .result-table td:first-child,.preview-result .result-table th:first-child{text-align:left}.preview-result .pass{color:#087f4e;font-weight:800}.preview-result .fail{color:#c62828;font-weight:800}
-.preview-result .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:4px 20px 24px}.preview-result .summary-box{border:1px solid #e0e5e8;border-radius:12px;padding:13px;text-align:center}.preview-result .summary-box span{display:block;color:#69736e;font-size:12px}.preview-result .summary-box strong{font-size:19px}.preview-result .result-status{text-align:center;padding:0 20px 12px}.preview-result .print-row{display:flex;justify-content:center;padding:0 20px 24px}.preview-result .print-btn{border:0;background:#087f4e;color:#fff;border-radius:10px;padding:11px 24px;font:inherit;font-weight:700;cursor:pointer}
-.preview-empty{background:#fff;border-radius:12px;padding:28px;text-align:center;color:#666}
-@media(max-width:700px){.preview-overlay{padding:0}.preview-panel{border-radius:0;min-height:100vh}.preview-controls{grid-template-columns:1fr 1fr}.preview-load{grid-column:1/-1}.preview-body{padding:10px}.preview-result .student-info{grid-template-columns:1fr 1fr;padding:15px}.preview-result .summary{grid-template-columns:1fr 1fr;padding:4px 15px 20px}.preview-result .table-wrap{padding:0 15px}.preview-result .result-head{padding:18px 14px}.preview-result .result-head img{width:48px;height:48px}.preview-result .result-head h2{font-size:19px}}
-</style>
-
 </head>
 
 <body>
@@ -103,9 +80,9 @@ html,body,button,input,select,textarea,table,th,td{font-family:"Noto Sans Bengal
       <div class="row">
         <input id="year" type="number" value="2026">
         <select id="examKey">
-          <option value="1st-term">প্রথম সাময়িক পরীক্ষা</option>
-          <option value="2nd-term" selected>দ্বিতীয় সাময়িক পরীক্ষা</option>
-          <option value="annual">বার্ষিক পরীক্ষা</option>
+          <option value="1st-term">প্রথম সাময়িক</option>
+          <option value="2nd-term" selected>দ্বিতীয় সাময়িক</option>
+          <option value="annual">বার্ষিক</option>
         </select>
         <input id="file" type="file" accept=".xlsx,.xls,.csv">
         <button id="uploadBtn" type="button">Import Excel</button>
@@ -481,80 +458,110 @@ html,body,button,input,select,textarea,table,th,td{font-family:"Noto Sans Bengal
 
 <div id="previewOverlay" class="preview-overlay" aria-hidden="true">
   <div class="preview-panel">
-    <div class="preview-toolbar">
-      <strong>👁️ Admin Preview — Public Result-এর মতো</strong>
+    <div class="preview-head">
+      <strong>Admin Preview — Public Result View</strong>
       <button class="preview-close" type="button" onclick="closePreview()">বন্ধ করুন</button>
     </div>
-    <div class="preview-controls">
-      <div><label>সাল</label><select id="pvYear"></select></div>
-      <div><label>পরীক্ষা</label><select id="pvExam"></select></div>
-      <div><label>শ্রেণি</label><select id="pvClass"></select></div>
-      <div><label>রোল</label><input id="pvRoll" inputmode="numeric" placeholder="রোল নম্বর"></div>
-      <button class="preview-load" type="button" onclick="loadPublicStylePreview()">ফলাফল দেখুন</button>
-    </div>
     <div class="preview-body">
-      <span class="preview-badge">PREVIEW — পাবলিক সাইটে শিক্ষার্থী যেভাবে ফলাফল দেখবে</span>
-      <div id="previewContent" class="preview-result">
-        <div class="preview-empty">সাল, পরীক্ষা, শ্রেণি ও রোল নির্বাচন করে ফলাফল দেখুন।</div>
+      <span class="preview-label">PREVIEW — Public Result-এর মতো</span>
+      <div class="preview-card">
+        <div class="preview-title">দারুন নাজাত দাখিল মাদ্রাসা</div>
+        <div class="preview-subtitle" id="previewExamTitle">ফলাফল প্রিভিউ</div>
+        <div id="previewContent">ফলাফল লোড হচ্ছে…</div>
+        <div class="preview-note">এটি শুধু Admin Preview। এখানে কোনো ফলাফল পরিবর্তন করা হয় না।</div>
       </div>
     </div>
   </div>
 </div>
 <script>
-(function(){
-  const PV={year:null,exam:null,cls:null,rows:[]};
-  const bnDigits='০১২৩৪৫৬৭৮৯';
-  function pvBn(v){return String(v??'').replace(/\d/g,d=>bnDigits[d]);}
-  function pvEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
-  function pvClient(){return window.adminSupabase||null;}
-  function pvSetOptions(el,items,placeholder){el.innerHTML='<option value="">'+placeholder+'</option>';items.forEach(x=>{const o=document.createElement('option');o.value=x.value;o.textContent=x.label;el.appendChild(o);});}
-  async function pvLoadBase(){
-    const client=pvClient(); if(!client)return;
-    const y=document.getElementById('year').value||'2026';
-    const key=document.getElementById('examKey').value||'2nd-term';
-    const {data:ex,error:ee}=await client.from('exams').select('id,year,exam_key,exam_name_bn,exam_name,status').eq('year',Number(y)).eq('exam_key',key).maybeSingle();
-    if(ee) throw ee; if(!ex) throw new Error('এই সাল ও পরীক্ষার ফলাফল পাওয়া যায়নি।');
-    PV.year=ex; PV.exam=ex;
-    document.getElementById('pvYear').innerHTML='<option value="'+ex.year+'">'+pvBn(ex.year)+'</option>';
-    document.getElementById('pvExam').innerHTML='<option value="'+pvEsc(ex.exam_key)+'">'+pvEsc(ex.exam_name_bn||ex.exam_name||ex.exam_key)+'</option>';
-    const {data:rows,error:re}=await client.from('result_records').select('id,roll,student_name,subjects,total,average,point,grade,rank,class_id,classes:class_id(code,name_bn)').eq('exam_id',ex.id).order('roll');
-    if(re) throw re; PV.rows=rows||[];
-    const seen={}; (PV.rows).forEach(r=>{if(r.class_id&&!seen[r.class_id])seen[r.class_id]={value:r.class_id,label:r.classes?.name_bn||r.classes?.code||''};});
-    const classes=Object.values(seen); pvSetOptions(document.getElementById('pvClass'),classes,'-- শ্রেণি নির্বাচন করুন --');
-    if(classes[0]){document.getElementById('pvClass').value=classes[0].value;pvFillRolls(classes[0].value);}
+function openPreview(){
+  const ov=document.getElementById('previewOverlay');
+  if(!ov) return;
+  ov.style.display='block';
+  ov.setAttribute('aria-hidden','false');
+  renderAdminPreview();
+}
+function closePreview(){
+  const ov=document.getElementById('previewOverlay');
+  if(!ov) return;
+  ov.style.display='none';
+  ov.setAttribute('aria-hidden','true');
+}
+async function renderAdminPreview(){
+  const box=document.getElementById('previewContent');
+  const title=document.getElementById('previewExamTitle');
+  if(!box) return;
+  try{
+    const client = window.adminSupabase;
+    if(!client){
+      box.textContent='Supabase সংযোগ পাওয়া যায়নি। পেজটি একবার Refresh করুন।';
+      return;
+    }
+
+    // Use the currently selected exam controls when available.
+    const examKeyEl=document.querySelector('select[name*="exam" i], #examKey, #exam');
+    const yearEl=document.querySelector('input[name*="year" i], #year');
+    const examKey=(examKeyEl && examKeyEl.value) || '2nd-term';
+    const year=Number((yearEl && yearEl.value) || new Date().getFullYear());
+
+    const names={
+      '1st-term':'প্রথম সাময়িক পরীক্ষা',
+      '2nd-term':'দ্বিতীয় সাময়িক পরীক্ষা',
+      'annual':'বার্ষিক পরীক্ষা'
+    };
+
+    const {data: exam, error: ee}=await client
+      .from('exams')
+      .select('id,exam_name_bn,exam_name,year,status,exam_key')
+      .eq('year',year)
+      .eq('exam_key',examKey)
+      .maybeSingle();
+
+    if(ee) throw ee;
+    if(!exam){
+      box.textContent='এই পরীক্ষার তথ্য পাওয়া যায়নি।';
+      return;
+    }
+
+    if(title) title.textContent=(exam.exam_name_bn || names[examKey] || exam.exam_name || examKey)+' — '+exam.year;
+
+    const {data: rows, error: re}=await client
+      .from('result_records')
+      .select('roll,student_name,total,average,point,grade,rank,class_id')
+      .eq('exam_id',exam.id)
+      .order('class_id')
+      .order('roll');
+
+    if(re) throw re;
+    if(!rows || !rows.length){
+      box.textContent='এই পরীক্ষায় কোনো ফলাফল নেই।';
+      return;
+    }
+
+    const classIds=[...new Set(rows.map(r=>r.class_id).filter(Boolean))];
+    let classMap={};
+    if(classIds.length){
+      const {data: classes, error: ce}=await client
+        .from('classes')
+        .select('id,code,name_bn')
+        .in('id',classIds);
+      if(ce) throw ce;
+      (classes||[]).forEach(c=>classMap[c.id]=c.name_bn||c.code||'');
+    }
+
+    let out='<div style="overflow:auto"><table class="preview-table"><thead><tr><th>ক্রম</th><th>শ্রেণি</th><th>রোল</th><th>শিক্ষার্থীর নাম</th><th>মোট</th><th>গড়</th><th>পয়েন্ট</th><th>গ্রেড</th><th>স্থান</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      out+='<tr><td>'+(i+1)+'</td><td>'+escBn(classMap[r.class_id]||'')+'</td><td>'+escBn(r.roll||'')+'</td><td style="text-align:left">'+escBn(r.student_name||'')+'</td><td>'+escBn(r.total??'')+'</td><td>'+escBn(r.average??'')+'</td><td>'+escBn(r.point??'')+'</td><td>'+escBn(r.grade??'')+'</td><td>'+escBn(r.rank??'')+'</td></tr>';
+    });
+    out+='</tbody></table></div>';
+    box.innerHTML=out;
+  }catch(e){
+    box.textContent='Preview লোড করতে সমস্যা হয়েছে: '+(e.message||e);
   }
-  function pvFillRolls(classId){
-    const rows=PV.rows.filter(r=>String(r.class_id)===String(classId));
-    const roll=document.getElementById('pvRoll');
-    if(rows.length){roll.value=rows[0].roll||'';}
-  }
-  document.getElementById('pvClass').addEventListener('change',function(){pvFillRolls(this.value);});
-  window.openPreview=async function(){
-    const ov=document.getElementById('previewOverlay'); ov.style.display='block'; ov.setAttribute('aria-hidden','false');
-    document.body.style.overflow='hidden';
-    const box=document.getElementById('previewContent'); box.innerHTML='<div class="preview-empty">ফলাফল প্রস্তুত হচ্ছে…</div>';
-    try{await pvLoadBase(); await window.loadPublicStylePreview();}catch(e){box.innerHTML='<div class="preview-empty">Preview লোড করতে সমস্যা হয়েছে: '+pvEsc(e.message||e)+'</div>';}
-  };
-  window.closePreview=function(){const ov=document.getElementById('previewOverlay');ov.style.display='none';ov.setAttribute('aria-hidden','true');document.body.style.overflow='';};
-  window.loadPublicStylePreview=async function(){
-    const box=document.getElementById('previewContent');
-    try{
-      if(!PV.rows.length){box.innerHTML='<div class="preview-empty">এই পরীক্ষায় কোনো ফলাফল নেই।</div>';return;}
-      const c=document.getElementById('pvClass').value, roll=document.getElementById('pvRoll').value.trim();
-      const s=PV.rows.find(r=>String(r.class_id)===String(c)&&String(r.roll)===roll);
-      if(!s){box.innerHTML='<div class="preview-empty">এই শ্রেণি ও রোলের ফলাফল পাওয়া যায়নি।</div>';return;}
-      const ex=PV.exam;
-      const classBn=s.classes?.name_bn||s.classes?.code||'';
-      const subjects=Array.isArray(s.subjects)?s.subjects:[];
-      const rows=subjects.map((x,i)=>'<tr><td>'+pvBn(i+1)+'</td><td>'+pvEsc(x.name)+'</td><td>'+(x.marks==='*'?'—':pvBn(x.marks))+'</td></tr>').join('');
-      const pos=typeof s.rank==='number'?pvBn(s.rank):pvEsc(s.rank||'—');
-      const absent=s.grade==='অনুপস্থিত'||!subjects.some(x=>typeof x.marks==='number');
-      const status=absent?'<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>':(s.grade==='F'?'<span class="fail">ফেল</span>':'<span class="pass">উত্তীর্ণ</span>');
-      const total=s.total==null?'—':pvBn(s.total), avg=s.average==null?'—':pvBn(Number(s.average).toFixed(2)), point=s.point==null?'—':pvBn(Number(s.point).toFixed(2));
-      box.innerHTML='<div class="result-head"><img src="logo.jpg" alt="মাদ্রাসার লোগো"><div><h2>দারুন নাজাত আইডিয়াল মাদরাসা</h2><p>শিক্ষাবর্ষ: '+pvBn(ex.year)+' — '+pvEsc(ex.exam_name_bn||ex.exam_name||ex.exam_key)+' — '+pvEsc(classBn)+'</p></div></div><div class="student-info"><div class="info-box"><small>পরীক্ষার্থীর নাম</small><strong>'+pvEsc(s.student_name)+'</strong></div><div class="info-box"><small>শ্রেণি</small><strong>'+pvEsc(classBn)+'</strong></div><div class="info-box"><small>রোল নম্বর</small><strong>'+pvBn(s.roll)+'</strong></div><div class="info-box"><small>রেজিস্ট্রেশন</small><strong>'+pvEsc(s.registration||'—')+'</strong></div></div><div class="table-wrap"><table class="result-table"><thead><tr><th>ক্রম</th><th>বিষয়</th><th>নম্বর</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="summary"><div class="summary-box"><span>সর্বমোট নম্বর</span><strong>'+total+'</strong></div><div class="summary-box"><span>গড়</span><strong>'+avg+'</strong></div><div class="summary-box"><span>পয়েন্ট</span><strong>'+point+'</strong></div><div class="summary-box"><span>অবস্থান</span><strong>'+pos+'</strong></div></div><div class="result-status">গ্রেড: <b>'+pvEsc(s.grade||'—')+'</b> &nbsp; | &nbsp; ফলাফল: '+status+'</div><div class="print-row"><span style="font-size:13px;color:#666">এটাই পাবলিক Result পেজের ফলাফল প্রদর্শনের ধরন।</span></div>';
-    }catch(e){box.innerHTML='<div class="preview-empty">Preview লোড করতে সমস্যা হয়েছে: '+pvEsc(e.message||e)+'</div>';}
-  };
-})();
+}
+function escBn(v){
+  return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
 </script>
 
 </body>

@@ -510,3 +510,11 @@ select:disabled{background:#f3f5f4;color:#9aa2a8;cursor:not-allowed}
 .aplus-card #listForm{padding:0 20px 4px}
 .aplus-card .aplus-table-wrap.hidden{display:none}
 .aplus-card .print-row.hidden{display:none}
+
+/* সুন্দর ব্যক্তিগত ফলাফল */
+.result-section-title{margin:18px 0 8px;padding:10px 12px;border-radius:10px;background:#f2f8f5;color:#075e3d;font-weight:800;font-size:15px}
+.result-table .subject-name{text-align:left;font-weight:600}
+.result-table .subject-mark{text-align:center;font-weight:800;font-size:16px}
+.result-status{margin-top:14px;padding:11px 14px;border-radius:10px;text-align:center;background:#f7faf8;border:1px solid #d8e8df;font-size:14px}
+.result-status .pass{color:#087443;font-weight:800}.result-status .fail{color:#b42318;font-weight:800}
+@media(max-width:600px){.student-info{grid-template-columns:1fr 1fr}.student-info .info-box:first-child{grid-column:1/-1}.result-table th,.result-table td{padding:10px 7px}.result-table th:nth-child(1),.result-table td:nth-child(1){width:48px}.result-table th:nth-child(3),.result-table td:nth-child(3){width:110px}.result-section-title{font-size:14px}}

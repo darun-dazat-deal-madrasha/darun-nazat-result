@@ -50,7 +50,7 @@ async function loadResultData(){
         students.push({
           year:String(r.exams?.year ?? ''),
           exam:r.exams?.exam_name || '',
-          examBn:({"1st-term":"প্রথম সাময়িক পরীক্ষা","2nd-term":"দ্বিতীয় সাময়িক পরীক্ষা","annual":"বার্ষিক পরীক্ষা"}[r.exams?.exam_key] || r.exams?.exam_name_bn || r.exams?.exam_name || ''),
+          examBn:r.exams?.exam_name_bn || r.exams?.exam_name || '',
           examKey:r.exams?.exam_key || '',
           className:r.classes?.code || '',
           classBn:r.classes?.name_bn || r.classes?.code || '',
@@ -58,7 +58,7 @@ async function loadResultData(){
           reg:String(r.registration ?? ''),
           registration:String(r.registration ?? ''),
           name:r.student_name || '',
-          subjects:Array.isArray(r.subjects) ? r.subjects : [],
+          subjects:normalizeSubjects(r.subjects),
           total:r.total,
           average:r.average,
           point:r.point,
@@ -157,24 +157,56 @@ classWiseName.addEventListener("change",()=>{
   classWiseResult.classList.add("hidden");
 });
 
+function normalizeSubjects(raw){
+  if(Array.isArray(raw)){
+    return raw.map((x,i)=>{
+      if(x && typeof x==='object'){
+        const name=x.name ?? x.subject ?? x.subjectName ?? `বিষয় ${i+1}`;
+        const marks=x.marks ?? x.mark ?? x.value ?? x.score ?? '';
+        return {name:String(name), marks:marks};
+      }
+      return {name:`বিষয় ${i+1}`, marks:x};
+    }).filter(x=>x.name);
+  }
+  if(raw && typeof raw==='object'){
+    return Object.entries(raw).map(([name,marks])=>({name:String(name),marks}));
+  }
+  return [];
+}
+
+function subjectMarkValue(v){
+  if(v===null || v===undefined || v==='') return '—';
+  if(v==='*') return '—';
+  return bnNum(v);
+}
+
 function showPersonalResult(s){
   currentPersonalStudent = s;
-  const rows=(s.subjects||[]).map((x,i)=>`<tr><td>${bnNum(i+1)}</td><td>${esc(x.name)}</td><td>${x.marks==='*'?'—':bnNum(x.marks)}</td></tr>`).join("");
+  const subjects=normalizeSubjects(s.subjects);
+  const rows=subjects.map((x,i)=>{
+    const marks=x.marks;
+    return `<tr><td>${bnNum(i+1)}</td><td class="subject-name">${esc(x.name)}</td><td class="subject-mark">${subjectMarkValue(marks)}</td></tr>`;
+  }).join("");
   const pos=typeof s.rank === "number" ? bnNum(s.rank) : esc(s.rank || "—");
-  const absent=s.grade==='অনুপস্থিত' || !(s.subjects||[]).some(x=>typeof x.marks==='number');
-  const status=absent ? '<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>' : (s.grade==='F' ? '<span class="fail">ফেল</span>' : '<span class="pass">উত্তীর্ণ</span>');
+  const hasMarks=subjects.some(x=>x.marks!==null&&x.marks!==undefined&&x.marks!==''&&x.marks!=='*'&&Number.isFinite(Number(x.marks)));
+  const absent=s.grade==='অনুপস্থিত' || !hasMarks;
+  const isFail=String(s.grade||'').toUpperCase()==='F' || String(s.grade||'').includes('ফেল');
+  const status=absent ? '<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>' : (isFail ? '<span class="fail">ফেল</span>' : '<span class="pass">উত্তীর্ণ</span>');
   const total=s.total==null?'—':bnNum(s.total);
   const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
   const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
+  const reg=s.reg||s.registration||'';
   resultArea.innerHTML=`
     <div class="result-head"><img src="logo.jpg" alt="মাদ্রাসার লোগো"><div><h2>দারুন নাজাত আইডিয়াল মাদরাসা</h2><p>শিক্ষাবর্ষ: ${bnNum(s.year || "2026")} — ${esc(s.examBn || s.exam)} — ${esc(s.classBn || s.className)}</p></div></div>
     <div class="student-info">
       <div class="info-box"><small>পরীক্ষার্থীর নাম</small><strong>${esc(s.name)}</strong></div>
       <div class="info-box"><small>শ্রেণি</small><strong>${esc(s.classBn || s.className)}</strong></div>
       <div class="info-box"><small>রোল নম্বর</small><strong>${bnNum(s.roll)}</strong></div>
+      ${reg?`<div class="info-box"><small>রেজিস্ট্রেশন</small><strong>${bnNum(reg)}</strong></div>`:''}
     </div>
+    <div class="result-section-title">📚 বিষয়ভিত্তিক ফলাফল</div>
     <div class="table-wrap"><table class="result-table">
-      <thead><tr><th>ক্রম</th><th>বিষয়</th><th>নম্বর</th></tr></thead><tbody>${rows}</tbody>
+      <thead><tr><th>ক্রম</th><th>বিষয়</th><th>প্রাপ্ত নম্বর</th></tr></thead><tbody>${rows || '<tr><td colspan="3">বিষয়ভিত্তিক নম্বর পাওয়া যায়নি</td></tr>'}</tbody>
     </table></div>
     <div class="summary">
       <div class="summary-box"><span>সর্বমোট নম্বর</span><strong>${total}</strong></div>
