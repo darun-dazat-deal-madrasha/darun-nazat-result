@@ -180,6 +180,45 @@ function subjectMarkValue(v){
   return bnNum(v);
 }
 
+// ফলাফলের সারাংশ: Excel-এ total/average/point/grade ফাঁকা থাকলেও
+// বিষয়ভিত্তিক নম্বর থেকে স্বয়ংক্রিয়ভাবে হিসাব করা হবে।
+function numericMarks(subjects){
+  return (subjects||[]).map(x=>Number(x.marks)).filter(n=>Number.isFinite(n));
+}
+function gradeInfoFromAverage(avg){
+  if(!Number.isFinite(avg)) return {grade:'—',point:null};
+  if(avg>=80) return {grade:'A+',point:5};
+  if(avg>=70) return {grade:'A',point:4};
+  if(avg>=60) return {grade:'A-',point:3.5};
+  if(avg>=50) return {grade:'B',point:3};
+  if(avg>=40) return {grade:'C',point:2};
+  if(avg>=33) return {grade:'D',point:1};
+  return {grade:'F',point:0};
+}
+function resultSummary(s, subjects){
+  const marks=numericMarks(subjects);
+  const totalStored=Number(s.total);
+  const avgStored=Number(s.average);
+  const pointStored=Number(s.point);
+  const total=Number.isFinite(totalStored) ? totalStored : (marks.length ? marks.reduce((a,b)=>a+b,0) : null);
+  const average=Number.isFinite(avgStored) ? avgStored : (marks.length ? total/marks.length : null);
+  const gi=gradeInfoFromAverage(average);
+  const point=Number.isFinite(pointStored) ? pointStored : gi.point;
+  const grade=s.grade && String(s.grade).trim() ? String(s.grade).trim() : gi.grade;
+  return {total,average,point,grade,marksCount:marks.length};
+}
+
+function effectiveRank(s){
+  const stored=s.rank;
+  if(stored!==null && stored!==undefined && String(stored).trim()!=='') return stored;
+  const peers=students.filter(x=>String(x.year)===String(s.year)&&x.exam===s.exam&&x.className===s.className);
+  const totals=peers.map(x=>({x,total:resultSummary(x,normalizeSubjects(x.subjects)).total})).filter(o=>Number.isFinite(o.total)).sort((a,b)=>b.total-a.total);
+  const myTotal=resultSummary(s,normalizeSubjects(s.subjects)).total;
+  if(!Number.isFinite(myTotal)) return null;
+  const idx=totals.findIndex(o=>o.x===s || (String(o.x.roll)===String(s.roll)&&o.x.name===s.name));
+  if(idx<0) return null;
+  return totals.findIndex(o=>o.total===myTotal)+1;
+}
 function showPersonalResult(s){
   currentPersonalStudent = s;
   const subjects=normalizeSubjects(s.subjects);
@@ -187,14 +226,16 @@ function showPersonalResult(s){
     const marks=x.marks;
     return `<tr><td>${bnNum(i+1)}</td><td class="subject-name">${esc(x.name)}</td><td class="subject-mark">${subjectMarkValue(marks)}</td></tr>`;
   }).join("");
-  const pos=typeof s.rank === "number" ? bnNum(s.rank) : esc(s.rank || "—");
-  const hasMarks=subjects.some(x=>x.marks!==null&&x.marks!==undefined&&x.marks!==''&&x.marks!=='*'&&Number.isFinite(Number(x.marks)));
+  const summary=resultSummary(s, subjects);
+  const rank=effectiveRank(s);
+  const pos=typeof rank === "number" ? bnNum(rank) : esc(rank || "—");
+  const hasMarks=summary.marksCount>0;
   const absent=s.grade==='অনুপস্থিত' || !hasMarks;
-  const isFail=String(s.grade||'').toUpperCase()==='F' || String(s.grade||'').includes('ফেল');
+  const isFail=String(summary.grade||'').toUpperCase()==='F' || String(summary.grade||'').includes('ফেল');
   const status=absent ? '<span class="fail">অনুপস্থিত / অসম্পূর্ণ</span>' : (isFail ? '<span class="fail">ফেল</span>' : '<span class="pass">উত্তীর্ণ</span>');
-  const total=s.total==null?'—':bnNum(s.total);
-  const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
+  const total=summary.total==null?'—':bnNum(Number(summary.total).toFixed(0));
+  const avg=summary.average==null?'—':bnNum(Number(summary.average).toFixed(2));
+  const point=summary.point==null?'—':bnNum(Number(summary.point).toFixed(2));
   const reg=s.reg||s.registration||'';
   resultArea.innerHTML=`
     <div class="result-head"><img src="logo.jpg" alt="মাদ্রাসার লোগো"><div><h2>দারুন নাজাত আইডিয়াল মাদরাসা</h2><p>শিক্ষাবর্ষ: ${bnNum(s.year || "2026")} — ${esc(s.examBn || s.exam)} — ${esc(s.classBn || s.className)}</p></div></div>
@@ -214,7 +255,7 @@ function showPersonalResult(s){
       <div class="summary-box"><span>পয়েন্ট</span><strong>${point}</strong></div>
       <div class="summary-box"><span>অবস্থান</span><strong>${pos}</strong></div>
     </div>
-    <div class="result-status">গ্রেড: <b>${esc(s.grade||'—')}</b> &nbsp; | &nbsp; ফলাফল: ${status}</div>
+    <div class="result-status">গ্রেড: <b>${esc(summary.grade||'—')}</b> &nbsp; | &nbsp; ফলাফল: ${status}</div>
     <div class="print-row"><button class="print-btn" onclick="printResultArea()">🖨 ফলাফল প্রিন্ট / PDF</button></div>`;
   resultArea.classList.remove("hidden");
   resultArea.scrollIntoView({behavior:"smooth",block:"start"});
@@ -432,13 +473,15 @@ function buildPersonalPrintSheet(s){
     const marks=x.marks==='*' ? '—' : bnNum(x.marks);
     return `<tr><td class="subject-name">${esc(x.name||'—')}</td><td>${marks}</td></tr>`;
   }).join("");
-  const pos=typeof s.rank === "number" ? bnNum(s.rank) : esc(s.rank || "—");
-  const absent=s.grade==='অনুপস্থিত' || !(s.subjects||[]).some(x=>typeof x.marks==='number');
-  const status=absent ? 'অনুপস্থিত / অসম্পূর্ণ' : (s.grade==='F' ? 'ফেল' : 'উত্তীর্ণ');
-  const grade=esc(s.grade||'—');
-  const total=s.total==null?'—':bnNum(s.total);
-  const avg=s.average==null?'—':bnNum(Number(s.average).toFixed(2));
-  const point=s.point==null?'—':bnNum(Number(s.point).toFixed(2));
+  const summary=resultSummary(s,normalizeSubjects(s.subjects));
+  const rank=effectiveRank(s);
+  const pos=typeof rank === "number" ? bnNum(rank) : esc(rank || "—");
+  const absent=s.grade==='অনুপস্থিত' || summary.marksCount===0;
+  const status=absent ? 'অনুপস্থিত / অসম্পূর্ণ' : (summary.grade==='F' ? 'ফেল' : 'উত্তীর্ণ');
+  const grade=esc(summary.grade||'—');
+  const total=summary.total==null?'—':bnNum(Number(summary.total).toFixed(0));
+  const avg=summary.average==null?'—':bnNum(Number(summary.average).toFixed(2));
+  const point=summary.point==null?'—':bnNum(Number(summary.point).toFixed(2));
   return `
   <div class="print-sheet personal-print-sheet">
     <div class="print-decor top"></div>
@@ -475,7 +518,7 @@ function buildPersonalPrintSheet(s){
         <div class="mini-stat"><span>পয়েন্ট</span><strong>${point}</strong></div>
       </div>
     </div>
-    <div class="print-status ${s.grade==='F'||absent?'bad':'good'}">ফলাফল: <b>${status}</b></div>
+    <div class="print-status ${summary.grade==='F'||absent?'bad':'good'}">ফলাফল: <b>${status}</b></div>
     <div class="print-footer-note">দারুন নাজাত আইডিয়াল মাদরাসা — ফলাফল প্রকাশনা</div>
     <div class="print-signatures"><span>শ্রেণি শিক্ষক</span><span>পরীক্ষা নিয়ন্ত্রক</span><span>অধ্যক্ষ</span></div>
     <div class="print-decor bottom"></div>
