@@ -1,17 +1,12 @@
-Darun Nazat Result — GitHub Pages Upload
+Darun Nazat Result — CORRECTED GitHub Pages Upload
 
-Upload ALL files in this ZIP to the ROOT of the new GitHub repository.
+IMPORTANT:
+This ZIP uses the ORIGINAL FULL root admin.html.
+Do not replace it with website/admin.html.
 
-Expected root files:
-- index.html
-- admin.html
-- script.js
-- style.css
-- supabase-config.js
-- manifest.json
-- logo-192.png
-- logo-512.png
-- logo.jpg
+Upload all files in this ZIP to the ROOT of the new GitHub repository.
 
-Do NOT upload the Supabase Edge Function source files to the public GitHub Pages repository.
-The live Supabase functions remain in Supabase.
+The Admin Excel Import is configured to use:
+import-excel-v2
+
+Supabase Edge Functions remain in Supabase; do not upload service-role secrets.

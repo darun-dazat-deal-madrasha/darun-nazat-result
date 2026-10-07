@@ -37,35 +37,12 @@ let examOptions = [];
 async function loadResultData(){
   try{
     students.length=0;
-
-    // Admin Preview: use the authenticated preview snapshot prepared by admin.html.
-    // This renders through the exact same public result UI without exposing unpublished data publicly.
-    const previewMode = new URLSearchParams(location.search).get('adminPreview') === '1';
-    const previewRaw = previewMode ? localStorage.getItem('DN_ADMIN_PREVIEW') : null;
-    if(previewRaw){
-      try{
-        const preview = JSON.parse(previewRaw);
-        if(preview && Array.isArray(preview.students) && preview.students.length){
-          preview.students.forEach(s=>students.push(s));
-          examOptions = unique(students.map(s=>JSON.stringify({value:s.exam,label:s.examBn})))
-            .map(x=>JSON.parse(x));
-          examOptions.sort((a,b)=>a.value.localeCompare(b.value));
-          loadYears();
-          showAdminPreviewBanner(preview);
-          return;
-        }
-      }catch(previewError){
-        console.warn('Admin preview snapshot invalid:', previewError);
-      }
-    }
-
     const pageSize=1000;
     let from=0;
     while(true){
       const {data,error}=await supabaseClient
         .from('result_records')
         .select('id,exam_id,class_id,roll,registration,student_name,subjects,total,average,point,grade,rank,exams!inner(year,exam_key,exam_name,exam_name_bn,status,publish_at),classes!inner(code,name_bn)')
-        .eq('exams.status','published')
         .range(from,from+pageSize-1);
       if(error) throw error;
       const rows=data||[];
@@ -73,7 +50,7 @@ async function loadResultData(){
         students.push({
           year:String(r.exams?.year ?? ''),
           exam:r.exams?.exam_name || '',
-          examBn: ({'1st-term':'প্রথম সাময়িক পরীক্ষা','2nd-term':'দ্বিতীয় সাময়িক পরীক্ষা','annual':'বার্ষিক পরীক্ষা'}[r.exams?.exam_key] || r.exams?.exam_name_bn || r.exams?.exam_name || ''),
+          examBn:r.exams?.exam_name_bn || r.exams?.exam_name || '',
           examKey:r.exams?.exam_key || '',
           className:r.classes?.code || '',
           classBn:r.classes?.name_bn || r.classes?.code || '',
@@ -115,18 +92,6 @@ function fillSelect(select, values, placeholder){
 }
 function esc(v){
   return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-
-function showAdminPreviewBanner(preview){
-  let banner=document.getElementById('adminPreviewBanner');
-  if(!banner){
-    banner=document.createElement('div');
-    banner.id='adminPreviewBanner';
-    banner.style.cssText='position:sticky;top:0;z-index:50;background:#fff3cd;color:#664d03;border:1px solid #ffecb5;padding:10px 14px;margin:0 0 14px;border-radius:10px;text-align:center;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)';
-    const main=document.querySelector('main.main');
-    if(main) main.prepend(banner);
-  }
-  banner.textContent='PREVIEW MODE — '+(preview.examNameBn || 'ফলাফল')+' | এটি পাবলিকভাবে প্রকাশিত ফলাফল নয়';
 }
 
 function getYears(){
