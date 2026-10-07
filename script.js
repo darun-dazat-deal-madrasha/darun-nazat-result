@@ -50,7 +50,7 @@ async function loadResultData(){
         students.push({
           year:String(r.exams?.year ?? ''),
           exam:r.exams?.exam_name || '',
-          examBn:r.exams?.exam_name_bn || r.exams?.exam_name || '',
+          examBn:({"1st-term":"প্রথম সাময়িক পরীক্ষা","2nd-term":"দ্বিতীয় সাময়িক পরীক্ষা","annual":"বার্ষিক পরীক্ষা"}[r.exams?.exam_key] || r.exams?.exam_name_bn || r.exams?.exam_name || ''),
           examKey:r.exams?.exam_key || '',
           className:r.classes?.code || '',
           classBn:r.classes?.name_bn || r.classes?.code || '',
